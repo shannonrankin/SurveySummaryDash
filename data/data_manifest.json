@@ -1,3 +1,16 @@
-[
-  "ADRIFT01_All.csv"
-]
+{
+  "csvFiles": [
+    "ADRIFT01_All.csv"
+  ],
+  "audioFiles": [
+    "ADRIFT01-All.wav",
+    "ADRIFT01-Bm.wav"
+  ],
+  "datasets": [
+    {
+      "file": "ADRIFT01_All.csv",
+      "project": "ADRIFT01",
+      "species": "All"
+    }
+  ]
+}
