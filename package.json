@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "homepage": "https://[your-username].github.io/AcousticSummaryDashboard",
+  "homepage": "https://shannonrankin.github.io/AcousticSummaryDashboard",
   "scripts": {
     "dev": "npm run generate-manifest && vite",
     "generate-manifest": "node ./scripts/generate_manifest.cjs",
