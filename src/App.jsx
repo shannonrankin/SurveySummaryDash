@@ -35,6 +35,8 @@ import {
   VisibilityOff
 } from '@mui/icons-material';
 import WaveSurfer from 'wavesurfer.js';
+import SpectrogramPlugin from 'wavesurfer.js/dist/plugins/spectrogram.esm.js';
+import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.esm.js';
 import { format, parseISO, getHours } from 'date-fns';
 
 function App() {
@@ -130,15 +132,36 @@ function App() {
     }
     const wavesurfer = WaveSurfer.create({
       container: '#waveform',
-      waveColor: '#4F4A85',
-      progressColor: '#383351',
-      cursorColor: '#fff',
+      waveColor: '#fff',
+      progressColor: '#4F4A85',
+      backgroundColor: '#000',
+      height: 80,
       barWidth: 2,
       barRadius: 3,
       cursorWidth: 1,
-      height: 80,
       barGap: 3,
-      responsive: true
+      responsive: true,
+      plugins: [
+        SpectrogramPlugin.create({
+          container: '#spectrogram',
+          labels: true,
+          height: 180,
+          backgroundColor: '#000',
+          colorMap: [
+            [0,0,0,255], [32,12,64,255], [64,32,128,255], [128,64,192,255], [192,128,255,255],
+            [255,192,128,255], [255,128,64,255], [255,64,32,255], [255,0,0,255], [255,255,0,255], [255,255,255,255]
+          ],
+          fftSamples: 512
+        }),
+        TimelinePlugin.create({
+          container: '#timeline',
+          height: 20,
+          primaryColor: '#fff',
+          secondaryColor: '#888',
+          fontFamily: 'monospace',
+          fontSize: 12
+        })
+      ]
     });
     wavesurfer.on('ready', () => setAudioPlaying(false));
     wavesurfer.on('audioprocess', (currentTime) => setAudioProgress(currentTime));
@@ -358,6 +381,30 @@ function App() {
     { value: 'monthly', label: 'Monthly' }
   ];
 
+  // Add state for selected species for audio
+  const [selectedAudioSpecies, setSelectedAudioSpecies] = useState('');
+
+  // Compute available species for audio files
+  const audioSpeciesList = Array.from(new Set((availableAudioFiles || []).map(f => f.split('_')[1]?.replace('.wav','')))).filter(Boolean);
+
+  // Filter audio files by selected species
+  const filteredAudioFiles = selectedAudioSpecies
+    ? availableAudioFiles.filter(f => f.split('_')[1]?.replace('.wav','') === selectedAudioSpecies)
+    : availableAudioFiles;
+
+  // When availableAudioFiles changes, set default species and audio file
+  useEffect(() => {
+    if (audioSpeciesList.length > 0) {
+      setSelectedAudioSpecies(audioSpeciesList[0]);
+    }
+  }, [availableAudioFiles]);
+
+  useEffect(() => {
+    if (filteredAudioFiles.length > 0) {
+      setSelectedAudioFile(filteredAudioFiles[0]);
+    }
+  }, [selectedAudioSpecies, availableAudioFiles]);
+
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
       {/* Sidebar */}
@@ -478,7 +525,7 @@ function App() {
 
       {/* Main content */}
       <Box component="main" sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-        <AppBar position="static">
+        <AppBar position="sticky" sx={{ zIndex: 1201 }}>
           <Toolbar>
             <IconButton
               color="inherit"
@@ -498,7 +545,7 @@ function App() {
           </Toolbar>
         </AppBar>
 
-        <Box sx={{ flexGrow: 1, p: 3, overflow: 'auto' }}>
+        <Box sx={{ flexGrow: 1, p: 3, overflow: 'auto', mt: 2 }}>
           {/* Top row: summary (40%), map (40%), legend (20%) in a single flex row */}
           <Box sx={{ display: 'flex', gap: 3, mb: 3 }}>
             {/* Summary (left, 40%) */}
@@ -623,47 +670,97 @@ function App() {
           </Box>
 
           {/* Spectrogram section with audio file dropdown */}
-          <Grid container spacing={3} sx={{ mb: 3 }}>
-            <Grid span={12}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                  Audio Spectrogram
-                </Typography>
-                {/* Audio file dropdown */}
+          <Box sx={{
+            width: '100vw',
+            display: 'flex',
+            justifyContent: 'center',
+            mb: 3,
+            overflowX: 'auto'
+          }}>
+            <Paper sx={{
+              p: 2,
+              width: '100%',
+              maxWidth: 1200, // wider for large screens
+              minWidth: 350,
+              mx: 'auto'
+            }}>
+              <Typography variant="h6" gutterBottom>
+                Audio Spectrogram
+              </Typography>
+              {/* Audio file dropdown for all .wav files, then species/audio dropdowns */}
+              <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
                 {availableAudioFiles.length > 0 && (
-                  <FormControl sx={{ minWidth: 240, mb: 2 }} size="small">
+                  <FormControl sx={{ minWidth: 200 }} size="small">
+                    <InputLabel>Audio File</InputLabel>
+                    <Select
+                      value={selectedAudioFile}
+                      label="Audio File"
+                      onChange={e => setSelectedAudioFile(e.target.value)}
+                    >
+                      {availableAudioFiles.map(f => (
+                        <MenuItem key={f} value={f}>{f}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+                {audioSpeciesList.length > 0 && (
+                  <FormControl sx={{ minWidth: 160 }} size="small">
+                    <InputLabel>Species</InputLabel>
+                    <Select
+                      value={selectedAudioSpecies}
+                      label="Species"
+                      onChange={e => setSelectedAudioSpecies(e.target.value)}
+                    >
+                      {audioSpeciesList.map(s => (
+                        <MenuItem key={s} value={s}>{s}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+                {filteredAudioFiles.length > 0 && (
+                  <FormControl sx={{ minWidth: 240 }} size="small">
                     <InputLabel>Call Audio</InputLabel>
                     <Select
                       value={selectedAudioFile}
                       label="Call Audio"
                       onChange={e => setSelectedAudioFile(e.target.value)}
                     >
-                      {availableAudioFiles.map(f => (
+                      {filteredAudioFiles.map(f => (
                         <MenuItem key={f} value={f}>{f.replace('.wav','')}</MenuItem>
                       ))}
                     </Select>
                   </FormControl>
                 )}
-                <Box sx={{ mb: 2 }}>
-                  <div id="waveform"></div>
-                </Box>
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                  <IconButton onClick={playAudio} disabled={audioPlaying}>
-                    <PlayArrow />
-                  </IconButton>
-                  <IconButton onClick={pauseAudio} disabled={!audioPlaying}>
-                    <Pause />
-                  </IconButton>
-                  <IconButton onClick={stopAudio}>
-                    <Stop />
-                  </IconButton>
-                  <Typography variant="body2" sx={{ ml: 2 }}>
-                    Progress: {Math.round(audioProgress)}s
-                  </Typography>
-                </Box>
-              </Paper>
-            </Grid>
-          </Grid>
+              </Box>
+              {/* Waveform, timeline, and spectrogram stacked tightly */}
+              <Box sx={{
+                background: '#000',
+                borderRadius: 2,
+                p: 0,
+                mb: 2,
+                width: '100%',
+                overflowX: 'auto'
+              }}>
+                <div id="waveform" style={{ width: '100%', height: 80, margin: 0, padding: 0 }}></div>
+                <div id="timeline" style={{ width: '100%', height: 20, margin: 0, padding: 0 }}></div>
+                <div id="spectrogram" style={{ width: '100%', height: 180, margin: 0, padding: 0 }}></div>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <IconButton onClick={playAudio} disabled={audioPlaying}>
+                  <PlayArrow />
+                </IconButton>
+                <IconButton onClick={pauseAudio} disabled={!audioPlaying}>
+                  <Pause />
+                </IconButton>
+                <IconButton onClick={stopAudio}>
+                  <Stop />
+                </IconButton>
+                <Typography variant="body2" sx={{ ml: 2 }}>
+                  Progress: {Math.round(audioProgress)}s
+                </Typography>
+              </Box>
+            </Paper>
+          </Box>
 
           {/* Visualization Section */}
           <Paper sx={{ p: 2 }}>
